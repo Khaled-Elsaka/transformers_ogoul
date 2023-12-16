@@ -746,7 +746,11 @@ class GenerationMixin:
         model_input_name = model_input_name if model_input_name is not None else self.main_input_name
         encoder_kwargs["return_dict"] = True
         encoder_kwargs[model_input_name] = inputs_tensor
-        model_kwargs["encoder_outputs"]: ModelOutput = encoder(**encoder_kwargs)
+        inputs_embeds=self.model.marbert_embed(input_ids=encoder_kwargs["input_ids"])
+        encoder_outputs = encoder(hidden_states=inputs_embeds, attention_mask=encoder_kwargs["attention_mask"])
+        mapped_outputs_marbert = self.model.marbertToMarian(encoder_outputs.last_hidden_state)
+        model_kwargs["encoder_outputs"]: ModelOutput = ModelOutput(last_hidden_state=mapped_outputs_marbert)
+        # model_kwargs["encoder_outputs"]: ModelOutput = encoder(**encoder_kwargs)
 
         return model_kwargs
 
