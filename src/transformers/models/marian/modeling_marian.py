@@ -1050,6 +1050,7 @@ class MarianModel(MarianPreTrainedModel):
 
     def __init__(self, config: MarianConfig):
         super().__init__(config)
+        self.marbertToMarian = torch.nn.Linear(768, 512)  # Maps from MarBERT hidden size to MArian
 
         padding_idx, vocab_size = config.pad_token_id, config.vocab_size
 
@@ -1180,15 +1181,33 @@ class MarianModel(MarianPreTrainedModel):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if encoder_outputs is None:
-            encoder_outputs = self.encoder(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                head_mask=head_mask,
-                inputs_embeds=inputs_embeds,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
+            # if inputs_embeds is None:
+            #     embed_dim = self.config.d_model
+            #     self.embed_scale = math.sqrt(embed_dim) if self.config.scale_embedding else 1.0
+            #     inputs_embeds = self.shared(input_ids) * self.embed_scale
+            #     embed_pos = self.embed_positions(input_ids.size())
+            #     hidden_states = inputs_embeds + embed_pos
+            # encoder_outputs = self.encoder(hidden_states=self.marianToMarbert(hidden_states), attention_mask=attention_mask)
+
+            if inputs_embeds is None:
+               inputs_embeds=self.marbert_embed(input_ids=input_ids,token_type_ids=token_type_ids)
+               hidden_states = inputs_embeds
+            encoder_outputs = self.encoder(hidden_states=hidden_states, attention_mask=attention_mask)
+           
+            mapped_outputs_marbert = self.marbertToMarian(encoder_outputs.last_hidden_state)
+            encoder_outputs = BaseModelOutput(last_hidden_state=mapped_outputs_marbert)
+            if not return_dict:
+                encoder_outputs=tuple(v for v in [encoder_outputs.hidden_states, encoder_outputs.encoder_states, encoder_outputs.all_attentions] if v is not None)
+            
+            # encoder_outputs = self.encoder(
+            #     input_ids=input_ids,
+            #     attention_mask=attention_mask,
+            #     head_mask=head_mask,
+            #     inputs_embeds=inputs_embeds,
+            #     output_attentions=output_attentions,
+            #     output_hidden_states=output_hidden_states,
+            #     return_dict=return_dict,
+            # )
         # If the user passed a tuple for encoder_outputs, we wrap it in a BaseModelOutput when return_dict=True
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
             encoder_outputs = BaseModelOutput(
