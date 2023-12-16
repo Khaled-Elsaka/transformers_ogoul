@@ -1190,7 +1190,7 @@ class MarianModel(MarianPreTrainedModel):
             # encoder_outputs = self.encoder(hidden_states=self.marianToMarbert(hidden_states), attention_mask=attention_mask)
 
             if inputs_embeds is None:
-               inputs_embeds=self.marbert_embed(input_ids=input_ids,token_type_ids=token_type_ids)
+               inputs_embeds=self.marbert_embed(input_ids=input_ids)
                hidden_states = inputs_embeds
             encoder_outputs = self.encoder(hidden_states=hidden_states, attention_mask=attention_mask)
            
